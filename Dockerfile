@@ -1,8 +1,12 @@
 # syntax=docker/dockerfile:labs
 ARG PYTHON_VERSION=3.9
 #
-# FROM --platform=$BUILDPLATFORM curlimages/curl:7.85.0 as vosk-downloader
-#
+FROM --platform=${BUILDPLATFORM} alpine:latest as axel
+RUN apk add axel
+
+FROM --platform=${BUILDPLATFORM} axel AS silero_model
+WORKDIR /downloads
+RUN axel -qk -n 4 -o silero_model.pt https://models.silero.ai/models/tts/ru/v3_1_ru.pt
 # WORKDIR /home/downloader/models
 #
 # RUN curl https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip -o ./c611af587fcbdacc16bc7a1c6148916c-vosk-model-small-ru-0.22.zip
@@ -64,7 +68,7 @@ RUN --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
     pip install --find-links=/wheels -r ./requirements.txt
     chown -R ${UNAME}:${UNAME} /home/${UNAME}/irene
 EOT
-COPY --link --chown=${UNAME} https://models.silero.ai/models/tts/ru/v3_1_ru.pt /home/${UNAME}/irene/silero_model.pt
+COPY --link --chown=${UNAME} --from=silero_model /downloads/silero_model.pt /home/${UNAME}/irene/silero_model.pt
 
 ADD --chown=${UNAME}:${UNAME} lingua_franca media mic_client model mpcapi plugins utils webapi_client localhost.crt \
     localhost.key jaa.py vacore.py runva_webapi.py runva_webapi_docker.json /home/${UNAME}/irene/
