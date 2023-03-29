@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} pip wheel --wheel-dir=/wheels -r 
 FROM python-base
 
 # Create a new user
-ARG UNAME=ireneapp
+ARG UNAME=python
 ENV UNAME ${UNAME}
 ARG UID=1001
 ARG GID=1001
@@ -65,15 +65,14 @@ RUN groupadd -o -g "${GID}" "${UNAME}" && useradd \
   "${UNAME}"
 
 WORKDIR /home/${UNAME}/irene
-COPY --link --from=wheels-builder /src/requirements.txt ./requirements.txt
-RUN --mount=type=cache,target=${PIP_CACHE_DIR} --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
+ADD ./requirements-docker.txt ./requirements.txt
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels \
     pip install --find-links=/wheels -r ./requirements.txt
-EOT
 COPY --link --from=silero_model /downloads/silero_model.pt /home/${UNAME}/irene/silero_model.pt
 
-ADD --link lingua_franca media mic_client model mpcapi plugins utils webapi_client localhost.crt \
-    localhost.key jaa.py vacore.py runva_webapi.py runva_webapi_docker.json /home/${UNAME}/irene/
-ADD --link docker_plugins /home/${UNAME}/plugins
+ADD ./lingua_franca ./media ./mic_client ./model ./mpcapi ./plugins ./utils ./webapi_client ./localhost.crt \
+    ./localhost.key ./jaa.py ./vacore.py ./runva_webapi.py ./runva_webapi_docker.json /home/${UNAME}/irene/
+ADD ./docker_plugins /home/${UNAME}/plugins
 # COPY --chown=python:python options_docker ./irene/options
 
 
