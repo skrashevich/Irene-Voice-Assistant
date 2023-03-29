@@ -31,14 +31,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
 # Prepare pip for buildkit cache
 ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
 ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
-RUN mkdir -p ${PIP_CACHE_DIR}
+RUN mkdir -p ${PIP_CACHE_DIR} && chmod 777 ${PIP_CACHE_DIR}
 ARG PIP_EXTRA_INDEX_URL
 ENV PIP_EXTRA_INDEX_URL ${PIP_EXTRA_INDEX_URL}
 
 
 FROM python-base as wheels-builder
-#RUN groupadd --gid 1001 python && useradd --create-home python --uid 1001 --gid python
-#USER python:python
+ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
+ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
 WORKDIR /src
 
 ADD ./requirements-docker.txt ./requirements.txt
@@ -47,29 +47,24 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} pip wheel --wheel-dir=/wheels -r 
 FROM python-base
 ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
 ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
-RUN ln -s /bin/uname /usr/local/bin/uname \
-    && ln -s /usr/bin/dpkg-split /usr/sbin/dpkg-split \
-    && ln -s /usr/bin/dpkg-deb /usr/sbin/dpkg-deb \
-    && ln -s /bin/rm /usr/sbin/rm \
-    && ln -s /bin/tar /usr/sbin/tar \
-    && groupadd --gid 1001 python \
-    && useradd --no-log-init -m -u 1001 -g 1001 python
+
+RUN groupadd --gid 1001 python && useradd --no-log-init -m -u 1001 -g 1001 python
 
 WORKDIR /home/python/irene
 COPY --link --from=wheels-builder /src/requirements.txt ./requirements.txt
-RUN --mount=type=cache,target=${PIP_CACHE_DIR} --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
+RUN --mount=type=cache,target=${PIP_CACHE_DIR},mode=0777 --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
     pip install --find-links=/wheels -r ./requirements.txt
     chown -R python:python /home/python/irene
 EOT
-USER python
+ADD --chown=python:python https://models.silero.ai/models/tts/ru/v3_1_ru.pt /home/python/irene/silero_model.pt
+
 ADD --chown=python:python lingua_franca media mic_client model mpcapi plugins utils webapi_client localhost.crt \
     localhost.key jaa.py vacore.py runva_webapi.py runva_webapi_docker.json /home/python/irene/
 ADD --chown=python:python --link docker_plugins /home/python/plugins
-#COPY --chown=python:python options_docker ./irene/options
+# COPY --chown=python:python options_docker ./irene/options
 
 
-#COPY --link --from=frontend-builder /home/frontend/dist/ ./irene_plugin_web_face_frontend/frontend-dist/
-ADD --link https://models.silero.ai/models/tts/ru/v3_1_ru.pt /home/python/irene/silero_model.pt
+# COPY --link --from=frontend-builder /home/frontend/dist/ ./irene_plugin_web_face_frontend/frontend-dist/
 # ADD --link --chown=1001:1001 https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip /src/irene/vosk-models/c611af587fcbdacc16bc7a1c6148916c-vosk-model-small-ru-0.22.zip
 # COPY --link --chown=1001:1001 --from=ssl-generator /home/generator/ssl/ ./ssl/
 
@@ -79,5 +74,6 @@ EXPOSE 5003
 # ENV IRENE_HOME=/irene
 WORKDIR /home/python/irene
 #ENTRYPOINT ["python", "-m", "irene", "--default-config", "/home/python/config"]
+USER python
 ENTRYPOINT ["python", "runva_webapi.py"]
 #ENTRYPOINT uvicorn runva_webapi:app --proxy-headers --host 0.0.0.0 --port 8089
