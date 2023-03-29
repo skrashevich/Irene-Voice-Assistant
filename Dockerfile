@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} pip wheel --wheel-dir=/wheels -r 
 FROM python-base
 
 # Create a new user
-ARG UNAME=python
+ARG UNAME=ireneapp
 ENV UNAME ${UNAME}
 ARG UID=1001
 ARG GID=1001
@@ -66,13 +66,12 @@ WORKDIR /home/${UNAME}/irene
 COPY --link --from=wheels-builder /src/requirements.txt ./requirements.txt
 RUN --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
     pip install --find-links=/wheels -r ./requirements.txt
-    chown -R ${UNAME}:${UNAME} /home/${UNAME}/irene
 EOT
-COPY --link --chown=${UNAME} --from=silero_model /downloads/silero_model.pt /home/${UNAME}/irene/silero_model.pt
+COPY --link --from=silero_model /downloads/silero_model.pt /home/${UNAME}/irene/silero_model.pt
 
-ADD --chown=${UNAME}:${UNAME} lingua_franca media mic_client model mpcapi plugins utils webapi_client localhost.crt \
+ADD --link lingua_franca media mic_client model mpcapi plugins utils webapi_client localhost.crt \
     localhost.key jaa.py vacore.py runva_webapi.py runva_webapi_docker.json /home/${UNAME}/irene/
-ADD --chown=${UNAME}:${UNAME} --link docker_plugins /home/${UNAME}/plugins
+ADD --link docker_plugins /home/${UNAME}/plugins
 # COPY --chown=python:python options_docker ./irene/options
 
 
@@ -84,8 +83,11 @@ EXPOSE 5003
 
 #VOLUME /home/python/irene
 # ENV IRENE_HOME=/irene
-WORKDIR /home/${UNAME}/irene
-#ENTRYPOINT ["python", "-m", "irene", "--default-config", "/home/python/config"]
+RUN     chown -R ${UNAME}:${UNAME} /home/${UNAME}
 USER ${UNAME}
+WORKDIR /home/${UNAME}/irene
+
+#ENTRYPOINT ["python", "-m", "irene", "--default-config", "/home/python/config"]
+
 ENTRYPOINT ["python", "runva_webapi.py"]
 #ENTRYPOINT uvicorn runva_webapi:app --proxy-headers --host 0.0.0.0 --port 8089
