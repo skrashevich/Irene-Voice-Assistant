@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
 # Prepare pip for buildkit cache
 ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
 ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
-RUN mkdir -p ${PIP_CACHE_DIR} && chmod 777 ${PIP_CACHE_DIR}
+RUN mkdir -p ${PIP_CACHE_DIR}
 ARG PIP_EXTRA_INDEX_URL
 ENV PIP_EXTRA_INDEX_URL ${PIP_EXTRA_INDEX_URL}
 
@@ -55,6 +55,8 @@ ARG UNAME=ireneapp
 ENV UNAME ${UNAME}
 ARG UID=1001
 ARG GID=1001
+ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
+ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
 RUN groupadd -o -g "${GID}" "${UNAME}" && useradd \
   --no-log-init \
   -m \
@@ -64,7 +66,7 @@ RUN groupadd -o -g "${GID}" "${UNAME}" && useradd \
 
 WORKDIR /home/${UNAME}/irene
 COPY --link --from=wheels-builder /src/requirements.txt ./requirements.txt
-RUN --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} --mount=type=bind,source=/wheels,from=wheels-builder,target=/wheels <<EOT
     pip install --find-links=/wheels -r ./requirements.txt
 EOT
 COPY --link --from=silero_model /downloads/silero_model.pt /home/${UNAME}/irene/silero_model.pt
