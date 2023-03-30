@@ -1,0 +1,6 @@
+.github
+.docs
+*.md
+.gitignore
+.vscode
+requirements_exe_runner.txt
