@@ -24,6 +24,8 @@ vosk~=0.3.7
 # Локальные запись и воспроизведение звука
 sounddevice~=0.4.3
 soundfile~=0.10.3.post1
+audioplayer
+pyttsx3
 
 wikipedia-api~=0.5.4
 termcolor~=1.1.0
