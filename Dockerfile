@@ -30,7 +30,7 @@ ENV PIP_USE_PEP517=1
 RUN rm -f /etc/apt/apt.conf.d/docker-clean \
   && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  apt update && apt install -y --no-install-recommends libportaudio2
+  apt update && apt install -y --no-install-recommends libportaudio2 alsa-utils espeak-ng
 
 # Prepare pip for buildkit cache
 ARG PIP_CACHE_DIR=/var/cache/buildkit/pip
@@ -79,7 +79,7 @@ COPY ./options_docker/* /home/${UNAME}/options
 # ADD --link --chown=1001:1001 https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip /src/irene/vosk-models/c611af587fcbdacc16bc7a1c6148916c-vosk-model-small-ru-0.22.zip
 # COPY --link --chown=1001:1001 --from=ssl-generator /home/generator/ssl/ ./ssl/
 
-EXPOSE 5003
+EXPOSE 8089
 
 #VOLUME /home/python/irene
 # ENV IRENE_HOME=/irene
@@ -89,5 +89,5 @@ WORKDIR /home/${UNAME}/irene
 
 #ENTRYPOINT ["python", "-m", "irene", "--default-config", "/home/python/config"]
 
-ENTRYPOINT ["python", "runva_webapi.py"]
-#ENTRYPOINT uvicorn runva_webapi:app --proxy-headers --host 0.0.0.0 --port 8089
+#ENTRYPOINT ["python", "runva_webapi.py"]
+ENTRYPOINT uvicorn runva_webapi:app --proxy-headers --host 0.0.0.0 --port 8089
